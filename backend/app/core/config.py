@@ -23,6 +23,35 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-# Ensure directories exist
-os.makedirs(settings.UPLOADS_DIR, exist_ok=True)
-os.makedirs(settings.DATASET_DIR, exist_ok=True)
+# Helper to check if a directory is writeable
+def check_writable(path):
+    try:
+        os.makedirs(path, exist_ok=True)
+        test_file = os.path.join(path, ".write_test")
+        with open(test_file, "w") as f:
+            f.write("test")
+        os.remove(test_file)
+        return True
+    except Exception:
+        return False
+
+# Ensure directories exist with fallback to /tmp
+if not check_writable(settings.UPLOADS_DIR):
+    settings.UPLOADS_DIR = "/tmp/uploads"
+    os.makedirs(settings.UPLOADS_DIR, exist_ok=True)
+
+if not check_writable(settings.DATASET_DIR):
+    settings.DATASET_DIR = "/tmp/dataset"
+    os.makedirs(settings.DATASET_DIR, exist_ok=True)
+
+# Ensure SQLite database parent directory exists and is writeable
+if settings.DATABASE_URL.startswith("sqlite:///"):
+    db_path = settings.DATABASE_URL.replace("sqlite:///", "")
+    db_dir = os.path.dirname(db_path)
+    if db_dir:
+        if not check_writable(db_dir):
+            settings.DATABASE_URL = "sqlite:////tmp/database.db"
+        else:
+            os.makedirs(db_dir, exist_ok=True)
+
+

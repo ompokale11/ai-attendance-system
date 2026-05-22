@@ -17,8 +17,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy backend application
 COPY . .
 
-# Ensure all files and directories are writeable (useful for SQLite & uploads)
-RUN chmod -R 777 /app
+# Create data directory and ensure all files and directories are writeable (useful for SQLite & uploads)
+RUN mkdir -p /app/data && chmod -R 777 /app && chmod -R 777 /app/data
 
 # Expose port
 EXPOSE 8000
