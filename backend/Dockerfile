@@ -17,8 +17,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy backend application
 COPY . .
 
+# Ensure all files and directories are writeable (useful for SQLite & uploads)
+RUN chmod -R 777 /app
+
 # Expose port
 EXPOSE 8000
 
 # Start command
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
