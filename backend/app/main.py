@@ -72,6 +72,19 @@ def read_root():
         "status": "healthy"
     }
 
+@app.get("/diagnose")
+def diagnose():
+    import traceback
+    try:
+        from app.core.database import SessionLocal
+        db = SessionLocal()
+        from sqlalchemy import text
+        db.execute(text("SELECT 1")).fetchall()
+        db.close()
+        return {"status": "ok", "message": "Database connection successful"}
+    except Exception as e:
+        return {"status": "error", "error": str(e), "traceback": traceback.format_exc()}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
