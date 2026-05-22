@@ -1,0 +1,42 @@
+# Database
+database.db
+backend/database.db
+
+# Virtual Environments
+backend/venv/
+venv/
+.venv/
+
+# Node modules
+frontend/node_modules/
+node_modules/
+
+# Build outputs
+frontend/dist/
+dist/
+
+# Netlify & IDEs
+frontend/.netlify/
+.netlify/
+.vscode/
+.idea/
+
+# Python cache
+__pycache__/
+backend/__pycache__/
+backend/app/__pycache__/
+backend/app/ai/__pycache__/
+backend/app/core/__pycache__/
+backend/app/crud/__pycache__/
+backend/app/models/__pycache__/
+backend/app/routes/__pycache__/
+backend/app/schemas/__pycache__/
+*.pyc
+
+# Local datasets and uploads
+backend/dataset/
+backend/uploads/
+
+# Env files
+.env
+frontend/.env.local
