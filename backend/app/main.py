@@ -75,15 +75,55 @@ def read_root():
 @app.get("/diagnose")
 def diagnose():
     import traceback
+    result = {
+        "database_url": settings.DATABASE_URL,
+        "uploads_dir": settings.UPLOADS_DIR,
+        "dataset_dir": settings.DATASET_DIR,
+        "uploads_writeable": False,
+        "dataset_writeable": False,
+        "db_writeable": False,
+        "db_error": None,
+        "status": "unknown"
+    }
+    
+    # Check upload dirs
+    try:
+        test_file = os.path.join(settings.UPLOADS_DIR, ".write_test")
+        with open(test_file, "w") as f:
+            f.write("test")
+        os.remove(test_file)
+        result["uploads_writeable"] = True
+    except Exception as e:
+        result["uploads_write_error"] = str(e)
+        
+    try:
+        test_file = os.path.join(settings.DATASET_DIR, ".write_test")
+        with open(test_file, "w") as f:
+            f.write("test")
+        os.remove(test_file)
+        result["dataset_writeable"] = True
+    except Exception as e:
+        result["dataset_write_error"] = str(e)
+
+    # Check database write
     try:
         from app.core.database import SessionLocal
         db = SessionLocal()
         from sqlalchemy import text
-        db.execute(text("SELECT 1")).fetchall()
+        # Try to execute a simple table check or write
+        db.execute(text("CREATE TABLE IF NOT EXISTS _test_write (id INTEGER PRIMARY KEY, val TEXT)"))
+        db.execute(text("INSERT INTO _test_write (val) VALUES ('test')"))
+        db.execute(text("DROP TABLE _test_write"))
+        db.commit()
         db.close()
-        return {"status": "ok", "message": "Database connection successful"}
+        result["db_writeable"] = True
+        result["status"] = "ok"
     except Exception as e:
-        return {"status": "error", "error": str(e), "traceback": traceback.format_exc()}
+        result["db_error"] = str(e)
+        result["db_traceback"] = traceback.format_exc()
+        result["status"] = "error"
+        
+    return result
 
 if __name__ == "__main__":
     import uvicorn
