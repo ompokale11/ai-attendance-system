@@ -43,7 +43,7 @@ def seed_admin_user():
     db = SessionLocal()
     try:
         admin_username = "admin"
-        admin_password = "adminpassword123"
+        admin_password = "admin123"
         
         existing = crud.get_user_by_username(db, admin_username)
         if not existing:
