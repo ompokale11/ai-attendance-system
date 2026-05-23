@@ -9,10 +9,18 @@ export const AttendanceScanner = () => {
   const overlayCanvasRef = useRef(null); // Visual canvas for bounding boxes
   
   const [streamActive, setStreamActive] = useState(false);
+  const [mediaStream, setMediaStream] = useState(null);
   const [ws, setWs] = useState(null);
   const [logs, setLogs] = useState([]); // List of scanned student results
   const [cameraError, setCameraError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Bind stream to video element when it becomes available
+  useEffect(() => {
+    if (videoRef.current && mediaStream) {
+      videoRef.current.srcObject = mediaStream;
+    }
+  }, [mediaStream, isLoading]);
 
   // Initialize WebSockets and start video on mount
   useEffect(() => {
@@ -32,10 +40,8 @@ export const AttendanceScanner = () => {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: 640, height: 480 }
       });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        setStreamActive(true);
-      }
+      setMediaStream(stream);
+      setStreamActive(true);
     } catch (err) {
       console.error("Camera access error:", err);
       setCameraError("Could not access your webcam. Please check permissions.");
@@ -45,12 +51,11 @@ export const AttendanceScanner = () => {
   };
 
   const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const tracks = videoRef.current.srcObject.getTracks();
-      tracks.forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-      setStreamActive(false);
+    if (mediaStream) {
+      mediaStream.getTracks().forEach(track => track.stop());
+      setMediaStream(null);
     }
+    setStreamActive(false);
   };
 
   const connectWebSocket = () => {
