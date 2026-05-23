@@ -117,10 +117,22 @@ def diagnose():
         db.commit()
         db.close()
         result["db_writeable"] = True
-        result["status"] = "ok"
     except Exception as e:
         result["db_error"] = str(e)
         result["db_traceback"] = traceback.format_exc()
+        
+    # Check hashing
+    try:
+        from app.core.security import get_password_hash
+        h = get_password_hash("adminpassword123")
+        result["hash_test"] = "ok"
+    except Exception as e:
+        result["hash_error"] = str(e)
+        result["hash_traceback"] = traceback.format_exc()
+
+    if result["db_writeable"] and result.get("hash_test") == "ok":
+        result["status"] = "ok"
+    else:
         result["status"] = "error"
         
     return result
