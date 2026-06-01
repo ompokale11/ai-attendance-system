@@ -93,7 +93,9 @@ export const Layout = ({ activePage, setActivePage, children }) => {
 
   // Build menu list based on role
   let menuItems = [];
-  if (user?.role === "admin") {
+  const userRole = user?.role?.toLowerCase();
+  
+  if (userRole === "admin") {
     menuItems = [
       { id: "dashboard", name: "Dashboard", icon: LayoutDashboard },
       { id: "pre_records", name: "Student Registry", icon: Users },
@@ -102,7 +104,7 @@ export const Layout = ({ activePage, setActivePage, children }) => {
       { id: "logs", name: "Attendance Logs", icon: ClipboardList },
       { id: "admin_super", name: "Super Dashboard", icon: ShieldAlert },
     ];
-  } else if (user?.role === "teacher") {
+  } else if (userRole === "teacher") {
     menuItems = [
       { id: "dashboard", name: "Dashboard", icon: LayoutDashboard },
       { id: "pre_records", name: "Student Registry", icon: Users },
@@ -110,7 +112,7 @@ export const Layout = ({ activePage, setActivePage, children }) => {
       { id: "qr_generator", name: "QR Generator", icon: QrCode },
       { id: "logs", name: "Attendance Logs", icon: ClipboardList },
     ];
-  } else if (user?.role === "student") {
+  } else if (userRole === "student") {
     menuItems = [
       { id: "student_dashboard", name: "Dashboard", icon: LayoutDashboard, requiresCompletion: true },
       { id: "student_scanner", name: "Scan QR Code", icon: Camera, requiresCompletion: true },
@@ -147,7 +149,7 @@ export const Layout = ({ activePage, setActivePage, children }) => {
               const isActive = activePage === item.id;
               
               // Force completion check
-              const isLocked = user?.role === "student" && item.requiresCompletion && profileCompletion < 100;
+              const isLocked = userRole === "student" && item.requiresCompletion && profileCompletion < 100;
 
               return (
                 <button
@@ -251,7 +253,7 @@ export const Layout = ({ activePage, setActivePage, children }) => {
                 {user?.username || "Guest User"}
               </p>
               <span className="text-[9px] text-indigo-400 font-bold uppercase tracking-wider block">
-                {user?.role === "admin" ? "Administrator" : user?.role === "teacher" ? "Lecturer" : "Student"}
+                {userRole === "admin" ? "Administrator" : userRole === "teacher" ? "Lecturer" : "Student"}
               </span>
             </div>
           </div>

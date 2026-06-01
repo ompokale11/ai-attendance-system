@@ -21,7 +21,7 @@ const AppContent = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      if (user?.role === "student") {
+      if (user?.role?.toLowerCase() === "student") {
         fetchStudentProfile();
       } else {
         setActivePage("dashboard");
@@ -98,7 +98,7 @@ const AppContent = () => {
           />
         );
       default:
-        return user?.role === "student" ? <StudentDashboard /> : <Dashboard />;
+        return user?.role?.toLowerCase() === "student" ? <StudentDashboard /> : <Dashboard />;
     }
   };
 
