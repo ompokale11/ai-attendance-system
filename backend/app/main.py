@@ -53,6 +53,12 @@ def seed_admin_user():
                 schemas.UserCreate(username=admin_username, password=admin_password, role="admin")
             )
             logger.info("Admin user seeded successfully.")
+        else:
+            if existing.role != "admin":
+                logger.info("Correcting default admin user role to admin")
+                existing.role = "admin"
+                db.commit()
+                logger.info("Admin user role updated to admin successfully.")
     except Exception as e:
         logger.error(f"Error seeding admin user: {e}")
     finally:
