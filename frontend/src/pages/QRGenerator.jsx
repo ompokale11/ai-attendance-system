@@ -87,10 +87,9 @@ export const QRGenerator = () => {
       if (response.ok) {
         const data = await response.json();
         setQrCodeData(data);
-        setSuccessMsg("Attendance QR generated successfully! Expiring in 2 minutes.");
-        // Set time left: expires_at is datetime. Calculate seconds between now and expires_at
-        // For simplicity, we set it to 120 seconds (2 minutes)
-        setTimeLeft(120);
+        setSuccessMsg("Attendance QR generated successfully! Expiring in 30 minutes.");
+        // For simplicity, we set it to 1800 seconds (30 minutes)
+        setTimeLeft(1800);
       } else {
         const data = await response.json();
         throw new Error(data.detail || "Failed to generate QR Code. Make sure you haven't exceeded the daily limit of 2 QRs.");
@@ -117,7 +116,7 @@ export const QRGenerator = () => {
           QR Attendance Generator
         </h1>
         <p className="text-slate-400 text-sm">
-          Initialize a secure, short-lived (2 minutes) attendance session QR code for a subject lecture.
+          Initialize a secure, short-lived (30 minutes) attendance session QR code for a subject lecture.
         </p>
       </div>
 
@@ -253,7 +252,7 @@ export const QRGenerator = () => {
               <QrCode className="w-16 h-16 mx-auto opacity-20 text-slate-400" />
               <p className="text-xs font-semibold uppercase tracking-wider">No Active QR Session</p>
               <p className="text-[11px] max-w-xs mx-auto">
-                Fill in the details and generate a session code. It will be valid for 2 minutes only.
+                Fill in the details and generate a session code. It will be valid for 30 minutes only.
               </p>
             </div>
           )}

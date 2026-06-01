@@ -38,8 +38,8 @@ def generate_attendance_qr(
     # Generate unique QR ID (UUID)
     qr_id = str(uuid.uuid4())
     
-    # QR code expires after 2 minutes
-    expires_at = datetime.utcnow() + timedelta(minutes=2)
+    # QR code expires after 30 minutes
+    expires_at = datetime.utcnow() + timedelta(minutes=30)
     
     # Save to database
     qr_record = crud.create_qr_code(db, teacher_id=current_user.id, qr_id=qr_id, qr_in=qr_in, expires_at=expires_at)
@@ -96,7 +96,7 @@ def validate_scan(
     if datetime.utcnow() > qr_record.expires_at:
         qr_record.is_active = False
         db.commit()
-        raise HTTPException(status_code=400, detail="This QR code has expired (exceeded 2 minutes limit).")
+        raise HTTPException(status_code=400, detail="This QR code has expired (exceeded 30 minutes limit).")
         
     # Verify student class info matches QR target group
     if (student.course.lower() != qr_record.course.lower() or 
