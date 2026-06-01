@@ -12,7 +12,7 @@ from app.schemas import schemas
 
 router = APIRouter(tags=["Analytics"])
 
-@router.get("/teachers/analytics/dashboard", response_model=Dict[str, Any])
+@router.get("/analytics/teachers/dashboard", response_model=Dict[str, Any])
 def get_teacher_dashboard_analytics(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
@@ -67,7 +67,7 @@ def get_teacher_dashboard_analytics(
         ]
     }
 
-@router.get("/teachers/analytics/charts", response_model=Dict[str, Any])
+@router.get("/analytics/teachers/charts", response_model=Dict[str, Any])
 def get_teacher_charts_analytics(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
@@ -196,7 +196,7 @@ def get_teacher_charts_analytics(
         "low_attendance_students": low_attendance_students
     }
 
-@router.get("/students/analytics/history", response_model=Dict[str, Any])
+@router.get("/analytics/students/history", response_model=Dict[str, Any])
 def get_student_history_analytics(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
