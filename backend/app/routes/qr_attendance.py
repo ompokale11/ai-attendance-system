@@ -27,13 +27,8 @@ def generate_attendance_qr(
     if current_user.role not in ["admin", "teacher"]:
         raise HTTPException(status_code=403, detail="Only teachers or administrators can generate QRs")
         
-    # Enforce maximum 2 QR generations per teacher per day
-    today_count = crud.get_teacher_daily_qr_count(db, teacher_id=current_user.id, target_date=date.today())
-    if today_count >= 2:
-        raise HTTPException(
-            status_code=400,
-            detail="Daily limit reached. You can only generate up to 2 attendance QRs per day."
-        )
+    # Daily limit restriction removed at user request to allow multiple QR generations
+
         
     # Generate unique QR ID (UUID)
     qr_id = str(uuid.uuid4())

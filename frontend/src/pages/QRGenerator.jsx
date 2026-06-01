@@ -92,7 +92,7 @@ export const QRGenerator = () => {
         setTimeLeft(1800);
       } else {
         const data = await response.json();
-        throw new Error(data.detail || "Failed to generate QR Code. Make sure you haven't exceeded the daily limit of 2 QRs.");
+        throw new Error(data.detail || "Failed to generate QR Code.");
       }
     } catch (err) {
       setError(err.message);
