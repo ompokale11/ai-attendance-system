@@ -5,7 +5,7 @@ import logging
 
 from app.core.config import settings
 from app.core.database import engine, Base, SessionLocal
-from app.routes import auth, students, attendance, websocket
+from app.routes import auth, students, attendance, websocket, qr_attendance, analytics, reports, notifications
 from app.crud import crud
 from app.schemas import schemas
 
@@ -50,7 +50,7 @@ def seed_admin_user():
             logger.info(f"Seeding default admin user: {admin_username}")
             crud.create_user(
                 db, 
-                schemas.UserCreate(username=admin_username, password=admin_password)
+                schemas.UserCreate(username=admin_username, password=admin_password, role="admin")
             )
             logger.info("Admin user seeded successfully.")
     except Exception as e:
@@ -63,6 +63,10 @@ app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(students.router, prefix=settings.API_V1_STR)
 app.include_router(attendance.router, prefix=settings.API_V1_STR)
 app.include_router(websocket.router, prefix=settings.API_V1_STR)
+app.include_router(qr_attendance.router, prefix=settings.API_V1_STR)
+app.include_router(analytics.router, prefix=settings.API_V1_STR)
+app.include_router(reports.router, prefix=settings.API_V1_STR)
+app.include_router(notifications.router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def read_root():

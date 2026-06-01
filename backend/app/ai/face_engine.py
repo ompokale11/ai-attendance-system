@@ -254,5 +254,48 @@ class FaceEngine:
             
         return results
 
+    def check_image_blur(self, image_np):
+        """
+        Computes the Laplacian variance to check for blurriness.
+        """
+        gray = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY)
+        variance = cv2.Laplacian(gray, cv2.CV_64F).var()
+        is_blurry = variance < 70.0
+        return float(variance), is_blurry
+
+    def validate_face_photo(self, image_np):
+        """
+        Validates the face photo quality, detection, and basic anti-spoof properties.
+        """
+        blur_score, is_blurry = self.check_image_blur(image_np)
+        if is_blurry:
+            return {"valid": False, "error": f"Image is too blurry (quality score: {blur_score:.1f} < 70.0)"}
+            
+        faces = self.detect_faces(image_np)
+        if not faces:
+            return {"valid": False, "error": "No face detected in the image."}
+        if len(faces) > 1:
+            return {"valid": False, "error": "Multiple faces detected. Please ensure only one face is in the image."}
+            
+        face = faces[0]
+        box = face["box"]
+        # Basic anti-spoof: check aspect ratio of face box (should be roughly vertical ellipse)
+        w, h = box[2], box[3]
+        ratio = float(h) / float(w) if w > 0 else 0
+        if ratio < 0.8 or ratio > 2.2:
+            return {"valid": False, "error": "Invalid face aspect ratio. Potential spoofing detected."}
+            
+        # Ensure face is large enough (at least 80x80 pixels)
+        if w < 70 or h < 70:
+            return {"valid": False, "error": "Face is too small. Please move closer to the camera."}
+            
+        return {
+            "valid": True,
+            "blur_score": blur_score,
+            "confidence": face["confidence"],
+            "box": box,
+            "raw_detect": face["raw_detect"]
+        }
+
 # Singleton instance
 face_engine = FaceEngine()

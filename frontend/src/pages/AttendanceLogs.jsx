@@ -65,9 +65,9 @@ export const AttendanceLogs = () => {
       if (searchId) params.append("student_id", searchId);
       if (startDate) params.append("start_date", startDate);
       if (endDate) params.append("end_date", endDate);
-      params.append("format", format);
+      params.append("file_format", format);
 
-      const response = await fetch(`${API_BASE_URL}/attendance/export?${params.toString()}`, {
+      const response = await fetch(`${API_BASE_URL}/teachers/reports/export?${params.toString()}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -83,7 +83,7 @@ export const AttendanceLogs = () => {
       const link = document.createElement("a");
       link.href = url;
       
-      const ext = format === "csv" ? "csv" : "xlsx";
+      const ext = format === "pdf" ? "pdf" : "xlsx";
       link.setAttribute("download", `attendance_export_${new Date().toISOString().slice(0,10)}.${ext}`);
       document.body.appendChild(link);
       link.click();
@@ -146,16 +146,16 @@ export const AttendanceLogs = () => {
           </div>
           <div className="flex space-x-3 w-full md:w-auto">
             <button
-              onClick={() => handleDownload("csv")}
+              onClick={() => handleDownload("pdf")}
               disabled={exportLoading !== null}
               className="flex-1 md:flex-none flex items-center justify-center space-x-2 px-5 py-2.5 bg-slate-900/80 hover:bg-slate-800 text-slate-300 text-xs font-semibold rounded-xl border border-white/5 shadow-lg active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
             >
-              {exportLoading === "csv" ? (
+              {exportLoading === "pdf" ? (
                 <Loader className="w-4 h-4 animate-spin text-indigo-400" />
               ) : (
                 <Download className="w-4 h-4 text-indigo-400" />
               )}
-              <span>Export CSV</span>
+              <span>Export PDF</span>
             </button>
             
             <button
