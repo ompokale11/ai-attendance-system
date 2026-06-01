@@ -172,24 +172,24 @@ export const Dashboard = () => {
           </div>
         </div>
 
-        {/* Department Distribution */}
+        {/* Course Distribution */}
         <div className="glass-panel p-5 flex flex-col h-[350px]">
-          <h4 className="text-sm font-semibold text-slate-300 mb-4">Department Distribution</h4>
+          <h4 className="text-sm font-semibold text-slate-300 mb-4">Course Distribution</h4>
           <div className="flex-1 w-full flex items-center justify-center">
-            {stats.department_stats.length > 0 ? (
+            {stats.course_stats && stats.course_stats.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={stats.department_stats}
+                    data={stats.course_stats}
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
                     outerRadius={90}
                     paddingAngle={5}
                     dataKey="count"
-                    nameKey="department"
+                    nameKey="course"
                   >
-                    {stats.department_stats.map((entry, index) => (
+                    {stats.course_stats.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -200,7 +200,7 @@ export const Dashboard = () => {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-slate-500 text-xs">No department data available</p>
+              <p className="text-slate-500 text-xs">No course data available</p>
             )}
           </div>
         </div>
