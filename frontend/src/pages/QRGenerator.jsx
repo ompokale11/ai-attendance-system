@@ -26,22 +26,7 @@ export const QRGenerator = () => {
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   
-  // Timer countdown state
-  const [timeLeft, setTimeLeft] = useState(0);
 
-  useEffect(() => {
-    let interval = null;
-    if (timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
-      }, 1000);
-    } else if (timeLeft === 0 && qrCodeData) {
-      setQrCodeData(null);
-      setSuccessMsg("");
-      setError("The generated QR code has expired.");
-    }
-    return () => clearInterval(interval);
-  }, [timeLeft, qrCodeData]);
 
   const handleGenerateQR = async (e) => {
     e.preventDefault();
@@ -88,8 +73,6 @@ export const QRGenerator = () => {
         const data = await response.json();
         setQrCodeData(data);
         setSuccessMsg("Attendance QR generated successfully! Expiring in 30 minutes.");
-        // For simplicity, we set it to 1800 seconds (30 minutes)
-        setTimeLeft(1800);
       } else {
         const data = await response.json();
         throw new Error(data.detail || "Failed to generate QR Code.");
@@ -101,11 +84,7 @@ export const QRGenerator = () => {
     }
   };
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
-  };
+
 
   return (
     <div className="space-y-6">
@@ -236,9 +215,9 @@ export const QRGenerator = () => {
               </div>
 
               <div className="space-y-1.5">
-                <p className="text-sm font-bold text-indigo-400 uppercase tracking-widest flex items-center justify-center gap-1.5">
-                  <Clock className="w-4 h-4 animate-pulse" />
-                  Time Left: {formatTime(timeLeft)}
+                <p className="text-sm font-bold text-emerald-400 uppercase tracking-widest flex items-center justify-center gap-1.5">
+                  <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping"></span>
+                  Active Session (30 Min Expiry)
                 </p>
                 <div className="text-xs text-slate-300">
                   <span className="font-semibold text-white">{qrCodeData.subject}</span> • Lecture {qrCodeData.lecture_number}
