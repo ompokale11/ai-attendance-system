@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+/* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
+import { useState, useEffect } from "react";
 import { useAuth, API_BASE_URL } from "../hooks/useAuth";
 import { 
   ShieldAlert, 
@@ -9,7 +10,12 @@ import {
   UserX, 
   Loader, 
   CheckCircle, 
-  AlertTriangle 
+  AlertTriangle,
+  Mail,
+  Key,
+  Server,
+  Send,
+  Save
 } from "lucide-react";
 
 export const SuperDashboard = () => {
@@ -22,19 +28,25 @@ export const SuperDashboard = () => {
   const [loadingDiag, setLoadingDiag] = useState(true);
   const [loadingLogs, setLoadingLogs] = useState(true);
   const [loadingStudents, setLoadingStudents] = useState(true);
-  const [error, setError] = useState("");
   const [notif, setNotif] = useState({ text: "", type: "" });
+
+  // SMTP Settings States
+  const [smtpConfig, setSmtpConfig] = useState({
+    smtp_user: "",
+    smtp_password: "",
+    smtp_host: "smtp.gmail.com",
+    smtp_port: "587",
+    smtp_from_name: "AI Attendance System",
+    is_configured: false,
+  });
+  const [savingSmtp, setSavingSmtp] = useState(false);
+  const [testingSmtp, setTestingSmtp] = useState(false);
+  const [testEmailTarget, setTestEmailTarget] = useState("");
 
   const showNotification = (text, type = "success") => {
     setNotif({ text, type });
     setTimeout(() => setNotif({ text: "", type: "" }), 4000);
   };
-
-  useEffect(() => {
-    fetchDiagnostics();
-    fetchLoginLogs();
-    fetchStudents();
-  }, []);
 
   const fetchDiagnostics = async () => {
     setLoadingDiag(true);
@@ -119,6 +131,90 @@ export const SuperDashboard = () => {
       showNotification(err.message, "error");
     }
   };
+
+  const fetchSmtpConfig = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/students/system/smtp-config`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setSmtpConfig((prev) => ({
+          ...prev,
+          smtp_user: data.smtp_user || "",
+          smtp_host: data.smtp_host || "smtp.gmail.com",
+          smtp_port: data.smtp_port || "587",
+          smtp_from_name: data.smtp_from_name || "AI Attendance System",
+          is_configured: data.is_configured,
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to load SMTP config", err);
+    }
+  };
+
+  const handleSaveSmtp = async (e) => {
+    e.preventDefault();
+    setSavingSmtp(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/students/system/smtp-config`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(smtpConfig),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        showNotification("SMTP email configuration saved successfully!", "success");
+        fetchSmtpConfig();
+      } else {
+        throw new Error(data.detail || "Failed to save SMTP configuration.");
+      }
+    } catch (err) {
+      showNotification(err.message, "error");
+    } finally {
+      setSavingSmtp(false);
+    }
+  };
+
+  const handleTestSmtp = async () => {
+    if (!testEmailTarget || !testEmailTarget.includes("@")) {
+      showNotification("Please enter a valid recipient email to test dispatch.", "error");
+      return;
+    }
+    setTestingSmtp(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/students/system/smtp-test`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ email: testEmailTarget }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        showNotification(data.detail || "Test email dispatched successfully! Please check your inbox.", "success");
+      } else {
+        throw new Error(data.detail || "SMTP test delivery failed.");
+      }
+    } catch (err) {
+      showNotification(err.message, "error");
+    } finally {
+      setTestingSmtp(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDiagnostics();
+    fetchLoginLogs();
+    fetchStudents();
+    fetchSmtpConfig();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -232,6 +328,162 @@ export const SuperDashboard = () => {
           </div>
         </div>
 
+      </div>
+
+      {/* Row: SMTP Email Service Configuration */}
+      <div className="glass-panel p-6 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
+              <Mail className="w-4 h-4 text-indigo-400" />
+              Email Service (SMTP) Configuration & Real OTP Dispatch
+            </h2>
+            <p className="text-xs text-slate-400 mt-1">
+              Configure your outgoing mail server to send real 6-digit One-Time Passwords (OTP) to students when they click "Verify Email".
+            </p>
+          </div>
+          <div>
+            {smtpConfig.is_configured ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <CheckCircle className="w-3.5 h-3.5" />
+                Active & Configured
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Not Configured
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Gmail Setup Instructions / Quick Guide */}
+        <div className="bg-indigo-950/20 border border-indigo-500/20 p-4 rounded-xl text-xs text-indigo-200 space-y-2">
+          <p className="font-semibold text-white flex items-center gap-2">
+            <span>💡 How to configure Gmail SMTP (Fastest & Free):</span>
+          </p>
+          <ol className="list-decimal list-inside space-y-1 text-slate-300">
+            <li>Go to your Google Account at <a href="https://myaccount.google.com/security" target="_blank" rel="noreferrer" className="text-indigo-400 underline">myaccount.google.com/security</a> and enable <strong>2-Step Verification</strong>.</li>
+            <li>Search for <strong>"App passwords"</strong> in Google Account settings.</li>
+            <li>Create an app named <em>AI Attendance System</em> and copy the generated <strong>16-character password</strong> (e.g. <code className="bg-slate-900 px-1.5 py-0.5 rounded text-amber-300">xxxx xxxx xxxx xxxx</code>).</li>
+            <li>Paste your Gmail into <strong>Sender Email</strong> and the 16-character code into <strong>Google App Password</strong> below.</li>
+          </ol>
+        </div>
+
+        <form onSubmit={handleSaveSmtp} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              Sender Email Address (SMTP User)
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
+              <input
+                type="email"
+                placeholder="your-email@gmail.com"
+                value={smtpConfig.smtp_user}
+                onChange={(e) => setSmtpConfig({ ...smtpConfig, smtp_user: e.target.value })}
+                className="w-full pl-9 pr-3 py-2 bg-[#0d1321]/60 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              App Password / SMTP Password
+            </label>
+            <div className="relative">
+              <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
+              <input
+                type="password"
+                placeholder="16-character App Password"
+                value={smtpConfig.smtp_password}
+                onChange={(e) => setSmtpConfig({ ...smtpConfig, smtp_password: e.target.value })}
+                className="w-full pl-9 pr-3 py-2 bg-[#0d1321]/60 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              Sender Display Name
+            </label>
+            <input
+              type="text"
+              placeholder="AI Attendance System"
+              value={smtpConfig.smtp_from_name}
+              onChange={(e) => setSmtpConfig({ ...smtpConfig, smtp_from_name: e.target.value })}
+              className="w-full px-3 py-2 bg-[#0d1321]/60 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              SMTP Host
+            </label>
+            <div className="relative">
+              <Server className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="smtp.gmail.com"
+                value={smtpConfig.smtp_host}
+                onChange={(e) => setSmtpConfig({ ...smtpConfig, smtp_host: e.target.value })}
+                className="w-full pl-9 pr-3 py-2 bg-[#0d1321]/60 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              SMTP Port
+            </label>
+            <input
+              type="number"
+              placeholder="587"
+              value={smtpConfig.smtp_port}
+              onChange={(e) => setSmtpConfig({ ...smtpConfig, smtp_port: e.target.value })}
+              className="w-full px-3 py-2 bg-[#0d1321]/60 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+              required
+            />
+          </div>
+
+          <div className="flex items-end">
+            <button
+              type="submit"
+              disabled={savingSmtp}
+              className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md shadow-indigo-600/20"
+            >
+              {savingSmtp ? <Loader className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save SMTP Configuration
+            </button>
+          </div>
+        </form>
+
+        {/* Live Test Email Dispatcher */}
+        <div className="border-t border-slate-800/80 pt-4 mt-2">
+          <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+            Send Test Verification Email
+          </label>
+          <div className="flex flex-col sm:flex-row gap-2 max-w-lg">
+            <input
+              type="email"
+              placeholder="recipient@example.com"
+              value={testEmailTarget}
+              onChange={(e) => setTestEmailTarget(e.target.value)}
+              className="flex-1 px-3 py-2 bg-[#0d1321]/60 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+            />
+            <button
+              type="button"
+              onClick={handleTestSmtp}
+              disabled={testingSmtp || !testEmailTarget}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all disabled:opacity-50"
+            >
+              {testingSmtp ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 text-indigo-400" />}
+              Send Test OTP
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Row 2: User account activation panel */}

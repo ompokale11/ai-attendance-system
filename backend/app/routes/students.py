@@ -361,7 +361,7 @@ def send_verification_email(
     
     # Dispatch real email
     sent, msg = send_real_verification_email(
-        to_email=clean_email, student_name=student.name, code=code
+        to_email=clean_email, student_name=student.name, code=code, db=db
     )
     
     if not sent:
@@ -370,7 +370,7 @@ def send_verification_email(
             detail=msg
         )
         
-    return {"detail": f"Verification code sent to {clean_email}. Please check your inbox and spam folder."}
+    return {"detail": f"One-Time Password (OTP) sent to {clean_email}. Please check your inbox and spam folder."}
 
 @router.post("/{student_id}/verify-email")
 def verify_email_code(
@@ -420,4 +420,66 @@ def verify_email_code(
     )
     
     return {"detail": "Email verified successfully.", "profile_completed_percentage": student.profile_completed_percentage}
+
+# System SMTP Email Configuration (Admin only)
+@router.get("/system/smtp-config")
+def get_smtp_config(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only administrators can manage SMTP email settings")
+    user = crud.get_system_setting(db, "smtp_user") or settings.SMTP_USER
+    host = crud.get_system_setting(db, "smtp_host") or settings.SMTP_HOST
+    port = crud.get_system_setting(db, "smtp_port") or str(settings.SMTP_PORT)
+    from_name = crud.get_system_setting(db, "smtp_from_name") or settings.SMTP_FROM_NAME
+    has_pwd = bool(crud.get_system_setting(db, "smtp_password") or settings.SMTP_PASSWORD)
+    return {
+        "smtp_user": user,
+        "smtp_host": host,
+        "smtp_port": port,
+        "smtp_from_name": from_name,
+        "is_configured": bool(user and has_pwd)
+    }
+
+@router.post("/system/smtp-config")
+def set_smtp_config(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only administrators can manage SMTP email settings")
+    if "smtp_user" in payload and payload["smtp_user"]:
+        crud.set_system_setting(db, "smtp_user", payload["smtp_user"].strip())
+    if "smtp_password" in payload and payload["smtp_password"].strip():
+        crud.set_system_setting(db, "smtp_password", payload["smtp_password"].strip())
+    if "smtp_host" in payload and payload["smtp_host"]:
+        crud.set_system_setting(db, "smtp_host", payload["smtp_host"].strip())
+    if "smtp_port" in payload and payload["smtp_port"]:
+        crud.set_system_setting(db, "smtp_port", str(payload["smtp_port"]).strip())
+    if "smtp_from_name" in payload and payload["smtp_from_name"]:
+        crud.set_system_setting(db, "smtp_from_name", payload["smtp_from_name"].strip())
+    return {"status": "success", "detail": "SMTP email configuration saved successfully."}
+
+@router.post("/system/smtp-test")
+def test_smtp_config(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only administrators can test SMTP settings")
+    target_email = payload.get("email")
+    if not target_email or "@" not in target_email:
+        raise HTTPException(status_code=400, detail="A valid recipient email address is required for testing.")
+    sent, msg = send_real_verification_email(
+        to_email=target_email.strip(),
+        student_name="Admin Test",
+        code="789012",
+        db=db
+    )
+    if not sent:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"status": "success", "detail": f"Test verification OTP email sent successfully to {target_email}!"}
 

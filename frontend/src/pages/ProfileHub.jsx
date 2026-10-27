@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useAuth, API_BASE_URL } from "../hooks/useAuth";
 import { 
   User, 
@@ -11,7 +11,7 @@ import {
   AlertCircle, 
   Loader, 
   Sparkles,
-  ArrowRight
+  Send
 } from "lucide-react";
 
 export const ProfileHub = ({ studentProfile, onRefreshProfile }) => {
@@ -71,24 +71,24 @@ export const ProfileHub = ({ studentProfile, onRefreshProfile }) => {
   };
 
   const handleSendVerificationEmail = async () => {
-    if (!email) {
-      showNotification("Please update your email address first", "error");
+    if (!email || !email.includes("@")) {
+      showNotification("Please provide a valid email address first", "error");
       return;
     }
     setSendingEmail(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/students/${studentProfile.student_id}/send-verification-email?email=${encodeURIComponent(email)}`, {
+      const response = await fetch(`${API_BASE_URL}/students/${studentProfile.student_id}/send-verification-email?email=${encodeURIComponent(email.trim())}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
+      const data = await response.json();
       if (response.ok) {
         setEmailSent(true);
-        showNotification(`Verification email sent to ${email}! Please check your inbox and spam folder.`, "success");
+        showNotification(data.detail || `One-Time Password (OTP) dispatched to ${email}! Please check your inbox and spam folder.`, "success");
       } else {
-        const data = await response.json();
-        throw new Error(data.detail || "Failed to send email");
+        throw new Error(data.detail || "Failed to send verification email");
       }
     } catch (err) {
       showNotification(err.message, "error");
@@ -99,23 +99,27 @@ export const ProfileHub = ({ studentProfile, onRefreshProfile }) => {
 
   const handleVerifyEmailCode = async (e) => {
     e.preventDefault();
-    if (!verificationCode) return;
+    const cleanCode = verificationCode.trim();
+    if (!cleanCode || cleanCode.length < 6) {
+      showNotification("Please enter the full 6-digit OTP code", "error");
+      return;
+    }
     setVerifyingEmail(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/students/${studentProfile.student_id}/verify-email?code=${verificationCode}`, {
+      const response = await fetch(`${API_BASE_URL}/students/${studentProfile.student_id}/verify-email?code=${cleanCode}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
+      const data = await response.json();
       if (response.ok) {
-        showNotification("Email verified successfully!", "success");
+        showNotification("One-Time Password verified successfully! Email confirmed.", "success");
         setEmailSent(false);
         setVerificationCode("");
         onRefreshProfile();
       } else {
-        const data = await response.json();
-        throw new Error(data.detail || "Invalid code. Please try again.");
+        throw new Error(data.detail || "Invalid or expired One-Time Password. Please try again.");
       }
     } catch (err) {
       showNotification(err.message, "error");
@@ -325,10 +329,18 @@ export const ProfileHub = ({ studentProfile, onRefreshProfile }) => {
 
           {/* Email Verification Section */}
           <div className="glass-panel p-6 space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300 border-b border-slate-800 pb-3 flex items-center gap-2">
-              <Mail className="w-4 h-4 text-indigo-400" />
-              2. Email Verification
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300 border-b border-slate-800 pb-3 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-indigo-400" />
+                2. Email Verification (One-Time Password)
+              </span>
+              {studentProfile?.is_email_verified && (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">
+                  Verified
+                </span>
+              )}
             </h3>
+
             {studentProfile?.is_email_verified ? (
               <div className="bg-emerald-950/20 border border-emerald-500/20 text-emerald-400 p-4 rounded-xl flex items-center gap-3 text-sm">
                 <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
@@ -339,50 +351,95 @@ export const ProfileHub = ({ studentProfile, onRefreshProfile }) => {
               </div>
             ) : (
               <div className="space-y-4">
-                <p className="text-xs text-slate-400">
-                  Verify your email address to secure your account. Click below to trigger a verification code.
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  A real 6-digit One-Time Password (OTP) will be dispatched directly to your registered email inbox. Confirm your email address below.
                 </p>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Target Email Address</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
+                    <input
+                      type="email"
+                      placeholder="student@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={emailSent}
+                      className="w-full pl-10 pr-4 py-2.5 bg-[#0d1321]/60 border border-slate-800/80 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-white placeholder-slate-600 disabled:opacity-75"
+                    />
+                  </div>
+                </div>
+
                 {!emailSent ? (
                   <button
                     onClick={handleSendVerificationEmail}
-                    disabled={sendingEmail}
-                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all"
+                    disabled={sendingEmail || !email}
+                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all shadow-lg shadow-indigo-600/20"
                   >
-                    {sendingEmail ? <Loader className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-                    Send Verification Email
+                    {sendingEmail ? (
+                      <>
+                        <Loader className="w-4 h-4 animate-spin" />
+                        <span>Sending One-Time Password...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        <span>Verify Email (Send One-Time Password)</span>
+                      </>
+                    )}
                   </button>
                 ) : (
-                  <form onSubmit={handleVerifyEmailCode} className="space-y-3">
-                    <div className="bg-indigo-950/30 border border-indigo-500/20 p-3 rounded-xl text-xs text-indigo-300">
-                      A 6-digit verification code has been sent to <span className="font-semibold text-white">{email}</span>. Please check your inbox and spam folder.
+                  <form onSubmit={handleVerifyEmailCode} className="space-y-4 pt-1">
+                    <div className="bg-indigo-950/40 border border-indigo-500/30 p-3.5 rounded-xl text-xs text-indigo-200 flex items-start gap-2.5">
+                      <Sparkles className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        A 6-digit One-Time Password (OTP) was dispatched to <strong className="text-white">{email}</strong>.
+                        Please check your inbox (and spam folder). Expires in 10 minutes.
+                      </div>
                     </div>
-                    <div className="flex gap-2">
+
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Enter 6-Digit OTP</label>
                       <input
                         type="text"
-                        placeholder="Enter 6-digit code"
+                        placeholder="• • • • • •"
                         value={verificationCode}
-                        onChange={(e) => setVerificationCode(e.target.value)}
-                        className="flex-1 px-4 py-2 bg-[#0d1321]/60 border border-slate-800 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-white text-center font-semibold tracking-widest placeholder-slate-600"
+                        onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        className="w-full px-4 py-3 bg-[#0d1321]/80 border border-indigo-500/50 rounded-xl text-lg focus:outline-none focus:border-indigo-400 text-white text-center font-mono tracking-[0.4em] font-bold placeholder-slate-600"
                         maxLength={6}
                         required
+                        autoFocus
                       />
+                    </div>
+
+                    <div className="flex gap-2">
                       <button
                         type="submit"
-                        disabled={verifyingEmail}
-                        className="px-6 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                        disabled={verifyingEmail || verificationCode.length < 6}
+                        className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all shadow-lg shadow-indigo-600/20"
                       >
-                        {verifyingEmail ? <Loader className="w-4 h-4 animate-spin" /> : "Verify"}
+                        {verifyingEmail ? <Loader className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4 text-emerald-300" />}
+                        <span>Verify OTP</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setEmailSent(false); setVerificationCode(""); }}
+                        className="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition-all"
+                        title="Change Email"
+                      >
+                        Change
                       </button>
                     </div>
-                    <div className="flex justify-between items-center text-[11px] text-slate-400 pt-1">
-                      <span>Didn't receive code?</span>
+
+                    <div className="flex justify-between items-center text-[11px] text-slate-400 pt-1 border-t border-slate-800/60">
+                      <span>Didn't receive the OTP?</span>
                       <button
                         type="button"
                         onClick={handleSendVerificationEmail}
                         disabled={sendingEmail}
-                        className="text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer underline"
+                        className="text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer underline disabled:opacity-50"
                       >
-                        {sendingEmail ? "Sending..." : "Resend Code"}
+                        {sendingEmail ? "Dispatching..." : "Resend OTP"}
                       </button>
                     </div>
                   </form>

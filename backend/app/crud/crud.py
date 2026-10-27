@@ -353,3 +353,28 @@ def delete_email_verification(db: Session, student_id: str):
         return True
     return False
 
+# System Settings Helpers
+def get_system_setting(db: Session, key: str, default: str = None) -> str:
+    if not db:
+        return default
+    try:
+        setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == key).first()
+        if setting and setting.value is not None:
+            return setting.value
+    except Exception:
+        pass
+    return default
+
+def set_system_setting(db: Session, key: str, value: str):
+    setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == key).first()
+    if setting:
+        setting.value = value
+        setting.updated_at = datetime.utcnow()
+    else:
+        setting = models.SystemSetting(key=key, value=value)
+        db.add(setting)
+    db.commit()
+    db.refresh(setting)
+    return setting
+
+

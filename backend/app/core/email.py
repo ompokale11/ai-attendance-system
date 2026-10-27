@@ -6,23 +6,38 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-def send_real_verification_email(to_email: str, student_name: str, code: str):
+def send_real_verification_email(to_email: str, student_name: str, code: str, db=None):
     """
     Sends a real 6-digit verification code email via SMTP.
     Returns (True, message) on success, or (False, error_message) on failure.
     """
-    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+    from app.crud import crud
+    
+    smtp_user = (crud.get_system_setting(db, "smtp_user") if db else None) or settings.SMTP_USER
+    smtp_password = (crud.get_system_setting(db, "smtp_password") if db else None) or settings.SMTP_PASSWORD
+    smtp_host = (crud.get_system_setting(db, "smtp_host") if db else None) or settings.SMTP_HOST
+    smtp_port_raw = (crud.get_system_setting(db, "smtp_port") if db else None) or settings.SMTP_PORT
+    try:
+        smtp_port = int(smtp_port_raw)
+    except (ValueError, TypeError):
+        smtp_port = 587
+        
+    smtp_from_name = (crud.get_system_setting(db, "smtp_from_name") if db else None) or settings.SMTP_FROM_NAME or "AI Attendance System"
+    smtp_from_email = (crud.get_system_setting(db, "smtp_from_email") if db else None) or settings.SMTP_FROM_EMAIL or smtp_user
+
+    if not smtp_user or not smtp_password:
         logger.warning(
             f"SMTP credentials not configured. OTP generated for {to_email} ({student_name}): {code}"
         )
         return False, (
-            "SMTP email service is not configured on the server. "
-            "Please configure SMTP_USER and SMTP_PASSWORD in Render Environment Variables."
+            "SMTP email service is not configured. "
+            "Please configure your Sender Email & App Password in the Admin Super Dashboard or Render Environment Variables."
         )
 
-    from_email = settings.SMTP_FROM_EMAIL or settings.SMTP_USER
-    from_name = settings.SMTP_FROM_NAME or "AI Attendance System"
+    from_email = smtp_from_email
+    from_name = smtp_from_name
     subject = f"{code} is your AI Attendance Verification Code"
+
 
     html_content = f"""
     <!DOCTYPE html>
@@ -163,16 +178,16 @@ def send_real_verification_email(to_email: str, student_name: str, code: str):
         msg.attach(MIMEText(text_content, "plain"))
         msg.attach(MIMEText(html_content, "html"))
 
-        if settings.SMTP_PORT == 465:
-            with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
-                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+        if smtp_port == 465:
+            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=15) as server:
+                server.login(smtp_user, smtp_password)
                 server.sendmail(from_email, [to_email], msg.as_string())
         else:
-            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
                 server.ehlo()
                 server.starttls()
                 server.ehlo()
-                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                server.login(smtp_user, smtp_password)
                 server.sendmail(from_email, [to_email], msg.as_string())
 
         logger.info(f"Verification email successfully delivered to {to_email}")
