@@ -34,13 +34,26 @@ def student_register(
         )
     
     # Verify pre-record details match
-    if (pre_record.name.lower() != reg_in.name.lower() or 
-        pre_record.course.lower() != reg_in.course.lower() or 
-        pre_record.year.lower() != reg_in.year.lower() or 
-        pre_record.division.lower() != reg_in.division.lower()):
+    mismatches = []
+    
+    if pre_record.name.strip().lower() != reg_in.name.strip().lower():
+        mismatches.append(f"Full Name (Expected: '{pre_record.name}', Got: '{reg_in.name}')")
+        
+    norm_pre_course = pre_record.course.strip().lower().rstrip('s')
+    norm_reg_course = reg_in.course.strip().lower().rstrip('s')
+    if norm_pre_course != norm_reg_course:
+        mismatches.append(f"Course (Expected: '{pre_record.course}', Got: '{reg_in.course}')")
+        
+    if pre_record.year.strip().lower() != reg_in.year.strip().lower():
+        mismatches.append(f"Year (Expected: '{pre_record.year}', Got: '{reg_in.year}')")
+        
+    if pre_record.division.strip().lower() != reg_in.division.strip().lower():
+        mismatches.append(f"Division (Expected: '{pre_record.division}', Got: '{reg_in.division}')")
+        
+    if mismatches:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Verification failed. Provided details do not match the pre-registered database."
+            detail=f"Verification failed. Provided details do not match the pre-registered database: {'; '.join(mismatches)}."
         )
         
     # 2. Check if student already has a user account
