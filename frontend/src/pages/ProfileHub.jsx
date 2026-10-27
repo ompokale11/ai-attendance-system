@@ -85,7 +85,7 @@ export const ProfileHub = ({ studentProfile, onRefreshProfile }) => {
       });
       if (response.ok) {
         setEmailSent(true);
-        showNotification("Mock verification code sent! Use code: 589410", "success");
+        showNotification(`Verification email sent to ${email}! Please check your inbox and spam folder.`, "success");
       } else {
         const data = await response.json();
         throw new Error(data.detail || "Failed to send email");
@@ -353,8 +353,8 @@ export const ProfileHub = ({ studentProfile, onRefreshProfile }) => {
                   </button>
                 ) : (
                   <form onSubmit={handleVerifyEmailCode} className="space-y-3">
-                    <div className="bg-slate-900 border border-slate-800 p-3 rounded-lg text-xs text-indigo-400 font-medium">
-                      Enter the mock code 589410 below to confirm verification.
+                    <div className="bg-indigo-950/30 border border-indigo-500/20 p-3 rounded-xl text-xs text-indigo-300">
+                      A 6-digit verification code has been sent to <span className="font-semibold text-white">{email}</span>. Please check your inbox and spam folder.
                     </div>
                     <div className="flex gap-2">
                       <input
@@ -372,6 +372,17 @@ export const ProfileHub = ({ studentProfile, onRefreshProfile }) => {
                         className="px-6 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer"
                       >
                         {verifyingEmail ? <Loader className="w-4 h-4 animate-spin" /> : "Verify"}
+                      </button>
+                    </div>
+                    <div className="flex justify-between items-center text-[11px] text-slate-400 pt-1">
+                      <span>Didn't receive code?</span>
+                      <button
+                        type="button"
+                        onClick={handleSendVerificationEmail}
+                        disabled={sendingEmail}
+                        className="text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer underline"
+                      >
+                        {sendingEmail ? "Sending..." : "Resend Code"}
                       </button>
                     </div>
                   </form>

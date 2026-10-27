@@ -14,6 +14,9 @@ from app.crud import crud
 from app.schemas import schemas
 from app.models import models
 from app.ai.face_engine import face_engine
+from app.core.email import send_real_verification_email
+import random
+from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/students", tags=["Students"])
 
@@ -328,7 +331,7 @@ async def upload_profile_photo(
     
     return {"photo_url": student.profile_photo, "profile_completed_percentage": student.profile_completed_percentage}
 
-# Simulating Email Verification
+# Real Email Verification via SMTP
 @router.post("/{student_id}/send-verification-email")
 def send_verification_email(
     student_id: str,
@@ -340,13 +343,34 @@ def send_verification_email(
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
         
-    student.email = email
+    clean_email = email.strip()
+    if not clean_email or "@" not in clean_email:
+        raise HTTPException(status_code=400, detail="Please enter a valid email address.")
+        
+    student.email = clean_email
     db.commit()
     
-    # Trigger a mock email notification
-    print(f"MOCK EMAIL SENT TO {email}: Verify your account using code 589410")
+    # Generate random 6-digit OTP code
+    code = f"{random.randint(100000, 999999)}"
+    expires_at = datetime.utcnow() + timedelta(minutes=10)
     
-    return {"detail": "Mock verification email sent. Code: 589410"}
+    # Store in database
+    crud.create_or_update_email_verification(
+        db, student_id=student.student_id, email=clean_email, code=code, expires_at=expires_at
+    )
+    
+    # Dispatch real email
+    sent, msg = send_real_verification_email(
+        to_email=clean_email, student_name=student.name, code=code
+    )
+    
+    if not sent:
+        raise HTTPException(
+            status_code=400,
+            detail=msg
+        )
+        
+    return {"detail": f"Verification code sent to {clean_email}. Please check your inbox and spam folder."}
 
 @router.post("/{student_id}/verify-email")
 def verify_email_code(
@@ -359,11 +383,31 @@ def verify_email_code(
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
         
-    if code != "589410":
-        raise HTTPException(status_code=400, detail="Invalid verification code")
+    verification = crud.get_email_verification(db, student_id=student.student_id)
+    if not verification:
+        raise HTTPException(
+            status_code=400, 
+            detail="No verification code found. Please click 'Send Verification Email' first."
+        )
         
+    if datetime.utcnow() > verification.expires_at:
+        crud.delete_email_verification(db, student_id=student.student_id)
+        raise HTTPException(
+            status_code=400, 
+            detail="Verification code has expired. Please request a new code."
+        )
+        
+    if verification.code.strip() != code.strip():
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid 6-digit verification code. Please check your email and try again."
+        )
+        
+    # Mark verified and delete OTP
     student.is_email_verified = True
     student.profile_completed_percentage = calculate_progress(student)
+    crud.delete_email_verification(db, student_id=student.student_id)
+    
     db.commit()
     db.refresh(student)
     
@@ -376,3 +420,4 @@ def verify_email_code(
     )
     
     return {"detail": "Email verified successfully.", "profile_completed_percentage": student.profile_completed_percentage}
+

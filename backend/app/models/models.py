@@ -109,3 +109,13 @@ class LoginLog(Base):
 
     # Relationships
     user = relationship("User")
+
+class EmailVerification(Base):
+    __tablename__ = "email_verifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(String, index=True, nullable=False)
+    email = Column(String, nullable=False)
+    code = Column(String, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)

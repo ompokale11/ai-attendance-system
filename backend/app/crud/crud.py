@@ -318,3 +318,38 @@ def get_dashboard_stats(db: Session) -> schemas.DashboardStats:
         daily_stats=daily_stats,
         course_stats=course_stats
     )
+
+# Email Verification Helpers
+def create_or_update_email_verification(db: Session, student_id: str, email: str, code: str, expires_at: datetime):
+    existing = db.query(models.EmailVerification).filter(models.EmailVerification.student_id == student_id).first()
+    if existing:
+        existing.email = email
+        existing.code = code
+        existing.expires_at = expires_at
+        existing.created_at = datetime.utcnow()
+        db.commit()
+        db.refresh(existing)
+        return existing
+    else:
+        new_record = models.EmailVerification(
+            student_id=student_id,
+            email=email,
+            code=code,
+            expires_at=expires_at
+        )
+        db.add(new_record)
+        db.commit()
+        db.refresh(new_record)
+        return new_record
+
+def get_email_verification(db: Session, student_id: str):
+    return db.query(models.EmailVerification).filter(models.EmailVerification.student_id == student_id).first()
+
+def delete_email_verification(db: Session, student_id: str):
+    existing = get_email_verification(db, student_id)
+    if existing:
+        db.delete(existing)
+        db.commit()
+        return True
+    return False
+
